@@ -1,0 +1,2 @@
+# Ensure Gradle wrapper scripts keep LF endings on all platforms
+gradlew text eol=lf
