@@ -1,6 +1,6 @@
 # kt-config-kit
 
-[![CI](https://github.com/philiprehberger/kt-config-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/kt-config-kit/actions/workflows/ci.yml)
+[![CI](https://github.com/philiprehberger/kt-config-kit/actions/workflows/publish.yml/badge.svg)](https://github.com/philiprehberger/kt-config-kit/actions/workflows/publish.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.philiprehberger/config-kit)](https://central.sonatype.com/artifact/com.philiprehberger/config-kit)
 
 Layered configuration loading from multiple sources with type-safe access.
