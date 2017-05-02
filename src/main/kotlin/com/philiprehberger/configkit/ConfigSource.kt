@@ -1,6 +1,7 @@
 package com.philiprehberger.configkit
 
 import java.io.File
+import java.io.StringReader
 import java.util.Properties
 
 /**
@@ -73,5 +74,106 @@ class PropertiesFileSource(private val path: String) : ConfigSource {
         val props = Properties()
         File(path).inputStream().use { props.load(it) }
         return props.entries.associate { (k, v) -> k.toString() to v.toString() }
+    }
+}
+
+/**
+ * Reads configuration from a JSON file.
+ *
+ * Flattens nested objects using dot notation. For example:
+ * ```json
+ * { "db": { "host": "localhost", "port": "5432" } }
+ * ```
+ * produces `db.host=localhost` and `db.port=5432`.
+ *
+ * Only string values and nested objects are supported. Arrays, numbers,
+ * booleans, and nulls are converted to their string representations.
+ *
+ * @property path the file path to the JSON file
+ */
+class JsonConfigSource(private val path: String) : ConfigSource {
+    override fun load(): Map<String, String> {
+        val content = File(path).readText().trim()
+        val result = mutableMapOf<String, String>()
+        if (content.startsWith("{")) {
+            parseObject(content, "", result)
+        }
+        return result
+    }
+
+    internal companion object {
+        /**
+         * Parses a JSON object string and flattens it into dot-notation key-value pairs.
+         */
+        fun parseObject(json: String, prefix: String, result: MutableMap<String, String>) {
+            val body = json.trim().removeSurrounding("{", "}").trim()
+            if (body.isEmpty()) return
+
+            val entries = splitTopLevelEntries(body)
+            for (entry in entries) {
+                val colonIndex = findColon(entry)
+                if (colonIndex == -1) continue
+
+                val rawKey = entry.substring(0, colonIndex).trim()
+                val key = rawKey.removeSurrounding("\"")
+                val rawValue = entry.substring(colonIndex + 1).trim()
+                val fullKey = if (prefix.isEmpty()) key else "$prefix.$key"
+
+                when {
+                    rawValue.startsWith("{") -> parseObject(rawValue, fullKey, result)
+                    rawValue.startsWith("\"") -> result[fullKey] = unescapeString(rawValue)
+                    rawValue == "null" -> result[fullKey] = ""
+                    else -> result[fullKey] = rawValue // numbers, booleans
+                }
+            }
+        }
+
+        private fun findColon(entry: String): Int {
+            var inString = false
+            var escape = false
+            for (i in entry.indices) {
+                val c = entry[i]
+                if (escape) { escape = false; continue }
+                if (c == '\\') { escape = true; continue }
+                if (c == '"') { inString = !inString; continue }
+                if (c == ':' && !inString) return i
+            }
+            return -1
+        }
+
+        private fun splitTopLevelEntries(body: String): List<String> {
+            val entries = mutableListOf<String>()
+            var depth = 0
+            var inString = false
+            var escape = false
+            var start = 0
+
+            for (i in body.indices) {
+                val c = body[i]
+                if (escape) { escape = false; continue }
+                if (c == '\\') { escape = true; continue }
+                if (c == '"') { inString = !inString; continue }
+                if (inString) continue
+                when (c) {
+                    '{', '[' -> depth++
+                    '}', ']' -> depth--
+                    ',' -> if (depth == 0) {
+                        entries.add(body.substring(start, i).trim())
+                        start = i + 1
+                    }
+                }
+            }
+            val last = body.substring(start).trim()
+            if (last.isNotEmpty()) entries.add(last)
+            return entries
+        }
+
+        private fun unescapeString(raw: String): String {
+            val inner = raw.removeSurrounding("\"")
+            return inner.replace("\\\"", "\"")
+                .replace("\\\\", "\\")
+                .replace("\\n", "\n")
+                .replace("\\t", "\t")
+        }
     }
 }
