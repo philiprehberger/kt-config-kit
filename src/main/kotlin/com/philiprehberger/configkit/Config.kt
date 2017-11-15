@@ -10,7 +10,7 @@ package com.philiprehberger.configkit
  *
  * @property sources the ordered list of configuration sources
  */
-class Config(private val sources: List<ConfigSource>) {
+public class Config(private val sources: List<ConfigSource>) {
     @PublishedApi internal val values: Map<String, String> by lazy {
         val merged = mutableMapOf<String, String>()
         for (source in sources) {
@@ -34,7 +34,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @throws IllegalStateException if the key is not found
      * @throws IllegalArgumentException if the value cannot be converted to the requested type
      */
-    inline fun <reified T> require(key: String): T {
+    public inline fun <reified T> require(key: String): T {
         val raw = values[key] ?: throw IllegalStateException("Required config key '$key' not found")
         return convert(raw)
     }
@@ -46,7 +46,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param default the fallback value
      * @return the typed value, or the default
      */
-    inline fun <reified T> get(key: String, default: T): T {
+    public inline fun <reified T> get(key: String, default: T): T {
         val raw = values[key] ?: return default
         return try {
             convert(raw)
@@ -61,7 +61,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param key the configuration key
      * @return the string value, or null if not found
      */
-    fun getString(key: String): String? = values[key]
+    public fun getString(key: String): String? = values[key]
 
     /**
      * Gets the raw string value for the given key, returning [default] if not found.
@@ -70,7 +70,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param default the fallback value
      * @return the string value, or the default
      */
-    fun getStringOrDefault(key: String, default: String): String = values[key] ?: default
+    public fun getStringOrDefault(key: String, default: String): String = values[key] ?: default
 
     /**
      * Gets the value as an integer.
@@ -78,7 +78,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param key the configuration key
      * @return the integer value, or null if not found or not parseable
      */
-    fun getInt(key: String): Int? = values[key]?.toIntOrNull()
+    public fun getInt(key: String): Int? = values[key]?.toIntOrNull()
 
     /**
      * Gets the value as an integer, returning [default] if not found or not parseable.
@@ -87,7 +87,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param default the fallback value
      * @return the integer value, or the default
      */
-    fun getIntOrDefault(key: String, default: Int): Int = values[key]?.toIntOrNull() ?: default
+    public fun getIntOrDefault(key: String, default: Int): Int = values[key]?.toIntOrNull() ?: default
 
     /**
      * Gets the value as a boolean.
@@ -97,7 +97,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param key the configuration key
      * @return the boolean value, or null if not found
      */
-    fun getBoolean(key: String): Boolean? {
+    public fun getBoolean(key: String): Boolean? {
         val raw = values[key] ?: return null
         return raw.lowercase() in setOf("true", "1", "yes")
     }
@@ -109,7 +109,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param default the fallback value
      * @return the boolean value, or the default
      */
-    fun getBooleanOrDefault(key: String, default: Boolean): Boolean {
+    public fun getBooleanOrDefault(key: String, default: Boolean): Boolean {
         val raw = values[key] ?: return default
         return raw.lowercase() in setOf("true", "1", "yes")
     }
@@ -121,7 +121,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param delimiter the string to split on (default: ",")
      * @return the list of trimmed strings, or null if the key is not found
      */
-    fun getList(key: String, delimiter: String = ","): List<String>? {
+    public fun getList(key: String, delimiter: String = ","): List<String>? {
         val raw = values[key] ?: return null
         return raw.split(delimiter).map { it.trim() }
     }
@@ -134,7 +134,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param default the fallback value
      * @return the list of trimmed strings, or the default
      */
-    fun getListOrDefault(key: String, delimiter: String = ",", default: List<String>): List<String> {
+    public fun getListOrDefault(key: String, delimiter: String = ",", default: List<String>): List<String> {
         val raw = values[key] ?: return default
         return raw.split(delimiter).map { it.trim() }
     }
@@ -149,7 +149,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @return the enum value, or null if not found
      * @throws IllegalArgumentException if the value does not match any enum constant
      */
-    inline fun <reified T : Enum<T>> getEnum(key: String): T? {
+    public inline fun <reified T : Enum<T>> getEnum(key: String): T? {
         val raw = values[key] ?: return null
         val upper = raw.uppercase()
         return enumValues<T>().find { it.name == upper }
@@ -164,7 +164,7 @@ class Config(private val sources: List<ConfigSource>) {
      *
      * @return an immutable map of all configuration keys and their interpolated values
      */
-    fun toMap(): Map<String, String> = values.toMap()
+    public fun toMap(): Map<String, String> = values.toMap()
 
     /**
      * Validates that all required keys are present.
@@ -172,7 +172,7 @@ class Config(private val sources: List<ConfigSource>) {
      * @param requiredKeys the keys that must exist
      * @throws IllegalStateException if any required keys are missing
      */
-    fun validate(vararg requiredKeys: String) {
+    public fun validate(vararg requiredKeys: String) {
         val missing = requiredKeys.filter { it !in values }
         if (missing.isNotEmpty()) {
             throw IllegalStateException(
@@ -194,7 +194,7 @@ class Config(private val sources: List<ConfigSource>) {
         }
     }
 
-    companion object {
+    public companion object {
         private val interpolationPattern = Regex("""\$\{([^}]+)}""")
 
         /**
