@@ -181,6 +181,65 @@ public class Config(private val sources: List<ConfigSource>) {
         }
     }
 
+    /**
+     * Checks whether a key exists in the configuration.
+     *
+     * @param key the configuration key
+     * @return true if the key exists, false otherwise
+     */
+    public fun has(key: String): Boolean = key in values
+
+    /**
+     * Gets the value as a long integer.
+     *
+     * @param key the configuration key
+     * @return the long value, or null if not found or not parseable
+     */
+    public fun getLong(key: String): Long? = values[key]?.toLongOrNull()
+
+    /**
+     * Gets the value as a long integer, returning [default] if not found or not parseable.
+     *
+     * @param key the configuration key
+     * @param default the fallback value
+     * @return the long value, or the default
+     */
+    public fun getLongOrDefault(key: String, default: Long): Long = values[key]?.toLongOrNull() ?: default
+
+    /**
+     * Gets the value as a double.
+     *
+     * @param key the configuration key
+     * @return the double value, or null if not found or not parseable
+     */
+    public fun getDouble(key: String): Double? = values[key]?.toDoubleOrNull()
+
+    /**
+     * Gets the value as a double, returning [default] if not found or not parseable.
+     *
+     * @param key the configuration key
+     * @param default the fallback value
+     * @return the double value, or the default
+     */
+    public fun getDoubleOrDefault(key: String, default: Double): Double = values[key]?.toDoubleOrNull() ?: default
+
+    /**
+     * Gets all configuration entries whose keys start with the given [prefix].
+     *
+     * The prefix is stripped from the returned keys. For example, with prefix `"db."`:
+     * - `db.host` becomes `host`
+     * - `db.port` becomes `port`
+     *
+     * @param prefix the key prefix to filter by
+     * @return a map of matching entries with the prefix stripped from keys
+     */
+    public fun getPrefix(prefix: String): Map<String, String> {
+        val dotPrefix = if (prefix.endsWith(".")) prefix else "$prefix."
+        return values
+            .filterKeys { it.startsWith(dotPrefix) }
+            .mapKeys { (key, _) -> key.removePrefix(dotPrefix) }
+    }
+
     @PublishedApi
     internal inline fun <reified T> convert(raw: String): T {
         @Suppress("UNCHECKED_CAST")
