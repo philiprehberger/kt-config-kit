@@ -43,6 +43,15 @@ class ConfigBuilder {
     }
 
     /**
+     * Adds a [JsonConfigSource] that reads from the given JSON file path.
+     *
+     * @param path the file path to the JSON file
+     */
+    fun jsonFile(path: String) {
+        sources.add(JsonConfigSource(path))
+    }
+
+    /**
      * Adds a [MapSource] with the given key-value pairs.
      *
      * @param m the configuration map

@@ -1,10 +1,12 @@
 package com.philiprehberger.configkit
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertContains
 
 class ConfigTest {
 
@@ -104,11 +106,7 @@ class ConfigTest {
 
     @Test
     fun `env var key transformation converts UPPER_SNAKE to dot case`() {
-        // We test the EnvVarSource transformation via a custom source that simulates env vars
-        // Since we can't set real env vars in tests, we verify the transformation logic
-        // by using MapSource with the expected transformed keys
         val cfg = config {
-            // Simulating what EnvVarSource would produce from APP_DB_HOST=localhost
             map(mapOf("db.host" to "localhost"))
         }
 
@@ -165,11 +163,8 @@ class ConfigTest {
 
     @Test
     fun `EnvVarSource with prefix transforms keys`() {
-        // EnvVarSource reads from System.getenv() which we can't mock easily,
-        // but we can verify it returns a map and the key transformation works
         val source = EnvVarSource("UNLIKELY_PREFIX_XYZ123")
         val result = source.load()
-        // Should return empty since no env vars match this prefix
         assertTrue(result.isEmpty())
     }
 
@@ -181,5 +176,331 @@ class ConfigTest {
         }
 
         assertEquals("value", cfg.getString("key"))
+    }
+
+    // --- JSON config source tests ---
+
+    @Test
+    fun `json source loads flat key-value pairs`() {
+        val file = createTempJson("""{"host": "localhost", "port": "5432"}""")
+        val cfg = config { jsonFile(file.absolutePath) }
+
+        assertEquals("localhost", cfg.getString("host"))
+        assertEquals("5432", cfg.getString("port"))
+
+        file.delete()
+    }
+
+    @Test
+    fun `json source flattens nested objects with dot notation`() {
+        val file = createTempJson("""
+        {
+            "db": {
+                "host": "localhost",
+                "port": "5432"
+            },
+            "app": {
+                "name": "myapp"
+            }
+        }
+        """.trimIndent())
+        val cfg = config { jsonFile(file.absolutePath) }
+
+        assertEquals("localhost", cfg.getString("db.host"))
+        assertEquals("5432", cfg.getString("db.port"))
+        assertEquals("myapp", cfg.getString("app.name"))
+
+        file.delete()
+    }
+
+    @Test
+    fun `json source handles deeply nested objects`() {
+        val file = createTempJson("""
+        {
+            "a": {
+                "b": {
+                    "c": "deep"
+                }
+            }
+        }
+        """.trimIndent())
+        val cfg = config { jsonFile(file.absolutePath) }
+
+        assertEquals("deep", cfg.getString("a.b.c"))
+
+        file.delete()
+    }
+
+    @Test
+    fun `json source handles numeric and boolean values as strings`() {
+        val file = createTempJson("""{"count": 42, "active": true, "empty": null}""")
+        val cfg = config { jsonFile(file.absolutePath) }
+
+        assertEquals("42", cfg.getString("count"))
+        assertEquals("true", cfg.getString("active"))
+        assertEquals("", cfg.getString("empty"))
+
+        file.delete()
+    }
+
+    @Test
+    fun `json source participates in layered override`() {
+        val file = createTempJson("""{"db.host": "json-host", "db.port": "3306"}""")
+        val cfg = config {
+            map(mapOf("db.host" to "default-host", "db.name" to "mydb"))
+            jsonFile(file.absolutePath)
+        }
+
+        assertEquals("json-host", cfg.getString("db.host"))
+        assertEquals("3306", cfg.getString("db.port"))
+        assertEquals("mydb", cfg.getString("db.name"))
+
+        file.delete()
+    }
+
+    // --- Variable interpolation tests ---
+
+    @Test
+    fun `simple variable interpolation`() {
+        val cfg = config {
+            map(mapOf(
+                "base.url" to "https://example.com",
+                "api.url" to "\${base.url}/api"
+            ))
+        }
+
+        assertEquals("https://example.com/api", cfg.getString("api.url"))
+    }
+
+    @Test
+    fun `nested variable interpolation`() {
+        val cfg = config {
+            map(mapOf(
+                "host" to "localhost",
+                "port" to "8080",
+                "base" to "\${host}:\${port}",
+                "url" to "http://\${base}/app"
+            ))
+        }
+
+        assertEquals("http://localhost:8080/app", cfg.getString("url"))
+    }
+
+    @Test
+    fun `circular reference detected`() {
+        assertFailsWith<IllegalStateException> {
+            config {
+                map(mapOf(
+                    "a" to "\${b}",
+                    "b" to "\${a}"
+                ))
+            }.getString("a") // force lazy evaluation
+        }
+    }
+
+    @Test
+    fun `self-referencing key detected as circular`() {
+        assertFailsWith<IllegalStateException> {
+            config {
+                map(mapOf("x" to "\${x}"))
+            }.getString("x")
+        }
+    }
+
+    @Test
+    fun `interpolation with missing reference leaves placeholder`() {
+        val cfg = config {
+            map(mapOf("greeting" to "Hello \${name}"))
+        }
+
+        assertEquals("Hello \${name}", cfg.getString("greeting"))
+    }
+
+    // --- Enum parsing tests ---
+
+    enum class LogLevel { DEBUG, INFO, WARN, ERROR }
+
+    @Test
+    fun `getEnum returns valid enum value`() {
+        val cfg = config {
+            map(mapOf("log.level" to "INFO"))
+        }
+
+        assertEquals(LogLevel.INFO, cfg.getEnum<LogLevel>("log.level"))
+    }
+
+    @Test
+    fun `getEnum is case insensitive`() {
+        val cfg = config {
+            map(mapOf("log.level" to "debug"))
+        }
+
+        assertEquals(LogLevel.DEBUG, cfg.getEnum<LogLevel>("log.level"))
+    }
+
+    @Test
+    fun `getEnum returns null for missing key`() {
+        val cfg = config {
+            map(emptyMap())
+        }
+
+        assertNull(cfg.getEnum<LogLevel>("log.level"))
+    }
+
+    @Test
+    fun `getEnum throws for invalid value`() {
+        val cfg = config {
+            map(mapOf("log.level" to "INVALID"))
+        }
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            cfg.getEnum<LogLevel>("log.level")
+        }
+        assertContains(ex.message ?: "", "INVALID")
+    }
+
+    // --- getOrDefault tests ---
+
+    @Test
+    fun `getStringOrDefault returns value when present`() {
+        val cfg = config { map(mapOf("key" to "value")) }
+        assertEquals("value", cfg.getStringOrDefault("key", "default"))
+    }
+
+    @Test
+    fun `getStringOrDefault returns default when missing`() {
+        val cfg = config { map(emptyMap()) }
+        assertEquals("default", cfg.getStringOrDefault("missing", "default"))
+    }
+
+    @Test
+    fun `getIntOrDefault returns value when present`() {
+        val cfg = config { map(mapOf("port" to "9090")) }
+        assertEquals(9090, cfg.getIntOrDefault("port", 3306))
+    }
+
+    @Test
+    fun `getIntOrDefault returns default when missing`() {
+        val cfg = config { map(emptyMap()) }
+        assertEquals(3306, cfg.getIntOrDefault("port", 3306))
+    }
+
+    @Test
+    fun `getIntOrDefault returns default for non-numeric value`() {
+        val cfg = config { map(mapOf("port" to "abc")) }
+        assertEquals(3306, cfg.getIntOrDefault("port", 3306))
+    }
+
+    @Test
+    fun `getBooleanOrDefault returns value when present`() {
+        val cfg = config { map(mapOf("debug" to "yes")) }
+        assertEquals(true, cfg.getBooleanOrDefault("debug", false))
+    }
+
+    @Test
+    fun `getBooleanOrDefault returns default when missing`() {
+        val cfg = config { map(emptyMap()) }
+        assertEquals(true, cfg.getBooleanOrDefault("debug", true))
+    }
+
+    @Test
+    fun `getListOrDefault returns value when present`() {
+        val cfg = config { map(mapOf("items" to "a,b,c")) }
+        assertEquals(listOf("a", "b", "c"), cfg.getListOrDefault("items", default = emptyList()))
+    }
+
+    @Test
+    fun `getListOrDefault returns default when missing`() {
+        val cfg = config { map(emptyMap()) }
+        val default = listOf("x", "y")
+        assertEquals(default, cfg.getListOrDefault("items", default = default))
+    }
+
+    @Test
+    fun `getListOrDefault with custom delimiter`() {
+        val cfg = config { map(mapOf("paths" to "/a;/b;/c")) }
+        assertEquals(listOf("/a", "/b", "/c"), cfg.getListOrDefault("paths", ";", emptyList()))
+    }
+
+    // --- toMap tests ---
+
+    @Test
+    fun `toMap returns all resolved config entries`() {
+        val cfg = config {
+            map(mapOf("a" to "1", "b" to "2", "c" to "3"))
+        }
+
+        val map = cfg.toMap()
+        assertEquals(3, map.size)
+        assertEquals("1", map["a"])
+        assertEquals("2", map["b"])
+        assertEquals("3", map["c"])
+    }
+
+    @Test
+    fun `toMap returns interpolated values`() {
+        val cfg = config {
+            map(mapOf("host" to "localhost", "url" to "http://\${host}"))
+        }
+
+        val map = cfg.toMap()
+        assertEquals("http://localhost", map["url"])
+    }
+
+    @Test
+    fun `toMap returns empty map for empty config`() {
+        val cfg = config { map(emptyMap()) }
+        assertTrue(cfg.toMap().isEmpty())
+    }
+
+    // --- validate tests ---
+
+    @Test
+    fun `validate passes when all keys present`() {
+        val cfg = config {
+            map(mapOf("db.host" to "localhost", "db.port" to "5432", "db.name" to "mydb"))
+        }
+
+        // Should not throw
+        cfg.validate("db.host", "db.port", "db.name")
+    }
+
+    @Test
+    fun `validate throws when keys are missing`() {
+        val cfg = config {
+            map(mapOf("db.host" to "localhost"))
+        }
+
+        val ex = assertFailsWith<IllegalStateException> {
+            cfg.validate("db.host", "db.port", "db.name")
+        }
+        assertContains(ex.message ?: "", "db.port")
+        assertContains(ex.message ?: "", "db.name")
+    }
+
+    @Test
+    fun `validate throws with single missing key`() {
+        val cfg = config {
+            map(mapOf("a" to "1"))
+        }
+
+        val ex = assertFailsWith<IllegalStateException> {
+            cfg.validate("a", "b")
+        }
+        assertContains(ex.message ?: "", "b")
+    }
+
+    @Test
+    fun `validate passes with no required keys`() {
+        val cfg = config { map(emptyMap()) }
+        cfg.validate() // Should not throw
+    }
+
+    // --- helpers ---
+
+    private fun createTempJson(content: String): File {
+        val file = File.createTempFile("config-test", ".json")
+        file.writeText(content)
+        return file
     }
 }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-18
+
+### Added
+- `JsonConfigSource` for loading configuration from JSON files with nested object flattening
+- Variable interpolation: values containing `${key}` are expanded from the same config, with circular reference detection
+- `getEnum<T>(key)` inline reified function for case-insensitive enum parsing
+- `getStringOrDefault(key, default)`, `getIntOrDefault(key, default)`, `getBooleanOrDefault(key, default)`, `getListOrDefault(key, delimiter, default)` convenience methods
+- `toMap()` for exporting all resolved configuration as a flat `Map<String, String>`
+- `validate(vararg requiredKeys)` that throws `IllegalStateException` if any required keys are missing
+- `jsonFile(path)` DSL builder function
+
 ## [0.1.1] - 2026-03-18
 
 - Fix CI badge and gradlew permissions
