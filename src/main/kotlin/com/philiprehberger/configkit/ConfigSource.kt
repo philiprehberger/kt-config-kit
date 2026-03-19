@@ -10,13 +10,13 @@ import java.util.Properties
  * Implementations load configuration from various backends
  * (environment variables, files, maps, etc.).
  */
-interface ConfigSource {
+public interface ConfigSource {
     /**
      * Loads all configuration entries from this source.
      *
      * @return a map of configuration keys to their string values
      */
-    fun load(): Map<String, String>
+    public fun load(): Map<String, String>
 }
 
 /**
@@ -30,7 +30,7 @@ interface ConfigSource {
  *
  * @property prefix optional prefix to filter and strip from environment variable names
  */
-class EnvVarSource(private val prefix: String? = null) : ConfigSource {
+public class EnvVarSource(private val prefix: String? = null) : ConfigSource {
     override fun load(): Map<String, String> {
         val env = System.getenv()
         val result = mutableMapOf<String, String>()
@@ -60,7 +60,7 @@ class EnvVarSource(private val prefix: String? = null) : ConfigSource {
  *
  * @property map the configuration entries
  */
-class MapSource(private val map: Map<String, String>) : ConfigSource {
+public class MapSource(private val map: Map<String, String>) : ConfigSource {
     override fun load(): Map<String, String> = map
 }
 
@@ -69,7 +69,7 @@ class MapSource(private val map: Map<String, String>) : ConfigSource {
  *
  * @property path the file path to the properties file
  */
-class PropertiesFileSource(private val path: String) : ConfigSource {
+public class PropertiesFileSource(private val path: String) : ConfigSource {
     override fun load(): Map<String, String> {
         val props = Properties()
         File(path).inputStream().use { props.load(it) }
@@ -91,7 +91,7 @@ class PropertiesFileSource(private val path: String) : ConfigSource {
  *
  * @property path the file path to the JSON file
  */
-class JsonConfigSource(private val path: String) : ConfigSource {
+public class JsonConfigSource(private val path: String) : ConfigSource {
     override fun load(): Map<String, String> {
         val content = File(path).readText().trim()
         val result = mutableMapOf<String, String>()

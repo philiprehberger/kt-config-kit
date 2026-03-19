@@ -12,7 +12,7 @@ package com.philiprehberger.configkit
  * }
  * ```
  */
-class ConfigBuilder {
+public class ConfigBuilder {
     private val sources = mutableListOf<ConfigSource>()
 
     /**
@@ -20,7 +20,7 @@ class ConfigBuilder {
      *
      * @param s the source to add
      */
-    fun source(s: ConfigSource) {
+    public fun source(s: ConfigSource) {
         sources.add(s)
     }
 
@@ -29,7 +29,7 @@ class ConfigBuilder {
      *
      * @param prefix optional prefix for filtering and stripping environment variable names
      */
-    fun envVars(prefix: String? = null) {
+    public fun envVars(prefix: String? = null) {
         sources.add(EnvVarSource(prefix))
     }
 
@@ -38,7 +38,7 @@ class ConfigBuilder {
      *
      * @param path the file path to the `.properties` file
      */
-    fun propertiesFile(path: String) {
+    public fun propertiesFile(path: String) {
         sources.add(PropertiesFileSource(path))
     }
 
@@ -47,7 +47,7 @@ class ConfigBuilder {
      *
      * @param path the file path to the JSON file
      */
-    fun jsonFile(path: String) {
+    public fun jsonFile(path: String) {
         sources.add(JsonConfigSource(path))
     }
 
@@ -56,7 +56,7 @@ class ConfigBuilder {
      *
      * @param m the configuration map
      */
-    fun map(m: Map<String, String>) {
+    public fun map(m: Map<String, String>) {
         sources.add(MapSource(m))
     }
 
@@ -83,6 +83,6 @@ class ConfigBuilder {
  * @param block the builder configuration
  * @return a configured [Config] instance
  */
-fun config(block: ConfigBuilder.() -> Unit): Config {
+public fun config(block: ConfigBuilder.() -> Unit): Config {
     return ConfigBuilder().apply(block).build()
 }
