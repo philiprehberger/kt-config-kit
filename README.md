@@ -1,13 +1,10 @@
-# kt-config-kit
+# config-kit
 
 [![CI](https://github.com/philiprehberger/kt-config-kit/actions/workflows/publish.yml/badge.svg)](https://github.com/philiprehberger/kt-config-kit/actions/workflows/publish.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.philiprehberger/config-kit)](https://central.sonatype.com/artifact/com.philiprehberger/config-kit)
+[![License](https://img.shields.io/github/license/philiprehberger/kt-config-kit)](LICENSE)
 
 Layered configuration loading from multiple sources with type-safe access.
-
-## Requirements
-
-- Kotlin 1.9+ / Java 17+
 
 ## Installation
 
@@ -15,7 +12,7 @@ Layered configuration loading from multiple sources with type-safe access.
 
 ```kotlin
 dependencies {
-    implementation("com.philiprehberger:config-kit:0.2.0")
+    implementation("com.philiprehberger:config-kit:0.2.2")
 }
 ```
 
@@ -33,7 +30,7 @@ dependencies {
 <dependency>
     <groupId>com.philiprehberger</groupId>
     <artifactId>config-kit</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.2</version>
 </dependency>
 ```
 
