@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 (2026-03-31)
+
+- Standardize README to 3-badge format with emoji Support section
+- Update CI checkout action to v5 for Node.js 24 compatibility
+- Add GitHub issue templates, dependabot config, and PR template
+
 ## 0.2.3 (2026-03-20)
 
 - Fix README: remove Groovy section, update badge label to "Tests"
