@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.assertContains
 
@@ -494,6 +495,158 @@ class ConfigTest {
     fun `validate passes with no required keys`() {
         val cfg = config { map(emptyMap()) }
         cfg.validate() // Should not throw
+    }
+
+    @Test
+    fun `has returns true for existing key`() {
+        val cfg = config {
+            map(mapOf("db.host" to "localhost"))
+        }
+        assertTrue(cfg.has("db.host"))
+    }
+
+    @Test
+    fun `has returns false for missing key`() {
+        val cfg = config {
+            map(mapOf("db.host" to "localhost"))
+        }
+        assertFalse(cfg.has("db.port"))
+    }
+
+    @Test
+    fun `getLong returns long value`() {
+        val cfg = config {
+            map(mapOf("max.size" to "9999999999"))
+        }
+        assertEquals(9999999999L, cfg.getLong("max.size"))
+    }
+
+    @Test
+    fun `getLong returns null for missing key`() {
+        val cfg = config {
+            map(mapOf("a" to "1"))
+        }
+        assertNull(cfg.getLong("missing"))
+    }
+
+    @Test
+    fun `getLong returns null for non-numeric value`() {
+        val cfg = config {
+            map(mapOf("key" to "not-a-number"))
+        }
+        assertNull(cfg.getLong("key"))
+    }
+
+    @Test
+    fun `getLongOrDefault returns value when present`() {
+        val cfg = config {
+            map(mapOf("size" to "42"))
+        }
+        assertEquals(42L, cfg.getLongOrDefault("size", 0L))
+    }
+
+    @Test
+    fun `getLongOrDefault returns default when missing`() {
+        val cfg = config {
+            map(mapOf("a" to "1"))
+        }
+        assertEquals(100L, cfg.getLongOrDefault("missing", 100L))
+    }
+
+    @Test
+    fun `getDouble returns double value`() {
+        val cfg = config {
+            map(mapOf("rate" to "3.14"))
+        }
+        assertEquals(3.14, cfg.getDouble("rate"))
+    }
+
+    @Test
+    fun `getDouble returns null for missing key`() {
+        val cfg = config {
+            map(mapOf("a" to "1"))
+        }
+        assertNull(cfg.getDouble("missing"))
+    }
+
+    @Test
+    fun `getDouble returns null for non-numeric value`() {
+        val cfg = config {
+            map(mapOf("key" to "abc"))
+        }
+        assertNull(cfg.getDouble("key"))
+    }
+
+    @Test
+    fun `getDoubleOrDefault returns value when present`() {
+        val cfg = config {
+            map(mapOf("rate" to "2.5"))
+        }
+        assertEquals(2.5, cfg.getDoubleOrDefault("rate", 0.0))
+    }
+
+    @Test
+    fun `getDoubleOrDefault returns default when missing`() {
+        val cfg = config {
+            map(mapOf("a" to "1"))
+        }
+        assertEquals(9.99, cfg.getDoubleOrDefault("missing", 9.99))
+    }
+
+    @Test
+    fun `has works after interpolation`() {
+        val cfg = config {
+            map(mapOf("host" to "localhost", "url" to "http://\${host}"))
+        }
+        assertTrue(cfg.has("url"))
+        assertTrue(cfg.has("host"))
+        assertFalse(cfg.has("missing"))
+    }
+
+    @Test
+    fun `getPrefix returns matching entries with prefix stripped`() {
+        val cfg = config {
+            map(mapOf(
+                "db.host" to "localhost",
+                "db.port" to "5432",
+                "db.name" to "mydb",
+                "app.name" to "test"
+            ))
+        }
+        val dbConfig = cfg.getPrefix("db")
+        assertEquals(3, dbConfig.size)
+        assertEquals("localhost", dbConfig["host"])
+        assertEquals("5432", dbConfig["port"])
+        assertEquals("mydb", dbConfig["name"])
+    }
+
+    @Test
+    fun `getPrefix returns empty map when no keys match`() {
+        val cfg = config {
+            map(mapOf("app.name" to "test"))
+        }
+        val result = cfg.getPrefix("db")
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `getPrefix works with trailing dot`() {
+        val cfg = config {
+            map(mapOf("db.host" to "localhost", "db.port" to "5432"))
+        }
+        val result = cfg.getPrefix("db.")
+        assertEquals(2, result.size)
+        assertEquals("localhost", result["host"])
+    }
+
+    @Test
+    fun `getPrefix does not match partial key names`() {
+        val cfg = config {
+            map(mapOf("database.host" to "localhost", "db.host" to "other"))
+        }
+        val result = cfg.getPrefix("db")
+        assertEquals(1, result.size)
+        assertEquals("other", result["host"])
     }
 
     // --- helpers ---

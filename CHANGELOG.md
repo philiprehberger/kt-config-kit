@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (2026-03-31)
+
+- Add `has()` method to check if a configuration key exists
+- Add `getLong()` and `getLongOrDefault()` for long integer values
+- Add `getDouble()` and `getDoubleOrDefault()` for floating-point values
+- Add `getPrefix()` to extract all entries under a key prefix as a sub-map
+
 ## 0.2.4 (2026-03-31)
 
 - Standardize README to 3-badge format with emoji Support section

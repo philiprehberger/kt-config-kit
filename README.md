@@ -11,7 +11,7 @@ Layered configuration loading from multiple sources with type-safe access.
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.philiprehberger:config-kit:0.2.3")
+implementation("com.philiprehberger:config-kit:0.3.0")
 ```
 
 ### Maven
@@ -20,7 +20,7 @@ implementation("com.philiprehberger:config-kit:0.2.3")
 <dependency>
     <groupId>com.philiprehberger</groupId>
     <artifactId>config-kit</artifactId>
-    <version>0.2.3</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 
@@ -158,6 +158,34 @@ Export all resolved configuration as a flat map:
 val allConfig: Map<String, String> = cfg.toMap()
 ```
 
+### Key Existence Check
+
+```kotlin
+if (cfg.has("db.host")) {
+    val host = cfg.getString("db.host")
+}
+```
+
+### Numeric Types
+
+```kotlin
+val maxFileSize: Long? = cfg.getLong("max.file.size")
+val rate: Double = cfg.getDoubleOrDefault("rate.limit", 1.0)
+```
+
+### Prefix Extraction
+
+Get all keys under a common prefix as a sub-map:
+
+```kotlin
+val cfg = config {
+    map(mapOf("db.host" to "localhost", "db.port" to "5432", "db.name" to "mydb"))
+}
+
+val dbConfig = cfg.getPrefix("db")
+// { "host" -> "localhost", "port" -> "5432", "name" -> "mydb" }
+```
+
 ## API
 
 | Class / Function | Description |
@@ -173,6 +201,12 @@ val allConfig: Map<String, String> = cfg.toMap()
 | `Config.getBooleanOrDefault(key, default)` | Gets the Boolean value with a fallback |
 | `Config.getList(key, delimiter)` | Splits the value into a list of strings |
 | `Config.getListOrDefault(key, delimiter, default)` | Splits the value with a fallback list |
+| `Config.has(key)` | Check if a key exists |
+| `Config.getLong(key)` | Gets the value as a Long or null |
+| `Config.getLongOrDefault(key, default)` | Gets the Long value with a fallback |
+| `Config.getDouble(key)` | Gets the value as a Double or null |
+| `Config.getDoubleOrDefault(key, default)` | Gets the Double value with a fallback |
+| `Config.getPrefix(prefix)` | Gets all entries under a prefix as a sub-map |
 | `Config.getEnum<T>(key)` | Parses a value as an enum constant (case-insensitive) |
 | `Config.toMap()` | Exports all resolved config as a flat map |
 | `Config.validate(vararg keys)` | Throws if any required keys are missing |
